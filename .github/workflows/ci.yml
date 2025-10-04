@@ -1,0 +1,16 @@
+name: Build Docker Image
+
+on: [push]  # Triggers on every push to main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest  # Free GitHub runner
+
+    steps:
+      - uses: actions/checkout@v4  # Pulls your code
+
+      - name: Build Docker Image
+        run: docker build -t file-organizer .  # Builds your image (fails if broken)
+
+      - name: Test Container Run
+        run: docker run --rm file-organizer  # Runs it (without volume for quick test)
