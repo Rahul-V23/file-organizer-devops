@@ -34,4 +34,4 @@ A configurable Python script that automatically organizes files in a `watch_fold
 - Extend: Add cron for scheduled runs or Kubernetes for scaling.
 - Contributions welcome!
 
-**Built by Rahul V
+**Built by Rahul V**
