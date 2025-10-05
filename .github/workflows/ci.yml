@@ -18,9 +18,9 @@ jobs:
       - name: Prepare Test Environment
         run: |
           mkdir -p watch_folder
-          touch watch_folder/test.txt watch_folder/test.jpg
+          touch watch_folder/test.txt watch_folder/test.jpg  # Dummy files for testing
 
       - name: Test Container Run
         run: |
           docker run --rm -v "${PWD}/watch_folder:/app/watch_folder" file-organizer
-          ls -l watch_folder  # Optional: Show post-run contents
+          ls -l watch_folder  # Show post-run contents
