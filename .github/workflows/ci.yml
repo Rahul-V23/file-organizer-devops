@@ -1,22 +1,26 @@
 name: Build Docker Image
 
-on: [push]  # Triggers on every push to main
+on:
+  push:
+    branches:
+      - main  # Only on main
 
 jobs:
   build:
-    runs-on: ubuntu-latest  # Free GitHub runner
+    runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4  # Pulls your code
+      - uses: actions/checkout@v4
 
       - name: Build Docker Image
-        run: docker build -t file-organizer .  # Builds your image (fails if broken)
+        run: docker build -t file-organizer .
 
       - name: Prepare Test Environment
         run: |
           mkdir -p watch_folder
-          touch watch_folder/test.txt watch_folder/test.jpg  # Dummy files for testing
+          touch watch_folder/test.txt watch_folder/test.jpg
 
       - name: Test Container Run
         run: |
-          docker run --rm -v $(pwd)/watch_folder:/app/watch_folder file-organizer  # Mounts test dir
+          docker run --rm -v "${PWD}/watch_folder:/app/watch_folder" file-organizer
+          ls -l watch_folder  # Optional: Show post-run contents
