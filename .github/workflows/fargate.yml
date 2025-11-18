@@ -1,4 +1,3 @@
-# .github/workflows/fargate.yml
 name: Deploy to AWS Fargate
 
 on:
@@ -23,7 +22,7 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Build, tag, push image
+      - name: Build, tag, push Docker image
         id: build-image
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
@@ -34,24 +33,33 @@ jobs:
           echo "image=$ECR_REGISTRY/file-organizer:$IMAGE_TAG" >> $GITHUB_OUTPUT
 
       - name: Render task definition
-        id: render-task-def
+        id: render
         uses: aws-actions/amazon-ecs-render-task-definition@v1
         with:
           task-definition: task-definition.json
           container-name: file-organizer-container
           image: ${{ steps.build-image.outputs.image }}
 
-      # This step SAVES the rendered JSON to a real file so the CLI can read it
+      # Save the rendered JSON cleanly (this fixes the "Invalid JSON" error)
       - name: Save rendered task definition
         run: |
-          echo '${{ steps.render-task-def.outputs.task-definition }}' > rendered-task-def.json
+          echo '${{ steps.render.outputs.task-definition }}' > rendered-task-def.json
 
-      # Raw AWS CLI — completely bypasses the buggy v2 action
-      - name: Register new task definition + deploy
+      # Register + deploy using raw AWS CLI (bypasses ALL bugs)
+      - name: Deploy to Fargate
         run: |
-          aws ecs register-task-definition --cli-input-json file://rendered-task-def.json
+          # Register the new revision
+          REVISION=$(aws ecs register-task-definition \
+            --cli-input-json file://rendered-task-def.json \
+            --query 'taskDefinition.revision' --output text)
+          
+          echo "New task definition revision: $REVISION"
+          
+          # Deploy it
           aws ecs update-service \
             --cluster ${{ secrets.ECS_CLUSTER }} \
             --service ${{ secrets.ECS_SERVICE }} \
-            --force-new-deployment \
-            --task-definition file-organizer
+            --task-definition file-organizer:$REVISION \
+            --force-new-deployment
+
+          echo "Deployment triggered successfully!"
