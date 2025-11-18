@@ -1,15 +1,10 @@
-# Use a lightweight Python base image
-# Keep your existing CMD ["python", "organizer.py"]
 FROM python:3.9-slim
 
-# Set working directory inside the container
 WORKDIR /app
+COPY . .
 
-# Install dependencies directly (bypasses any requirements.txt issues)
-RUN pip install --no-cache-dir PyYAML
+RUN pip install --no-cache-dir PyYAML fastapi uvicorn python-multipart
 
-# Copy your files into the container
-COPY organizer.py config.yaml ./
+EXPOSE 8000
 
-# Run the script when the container starts
-CMD ["python", "organizer.py"]
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
