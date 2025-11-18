@@ -3,80 +3,67 @@ import shutil
 import logging
 from pathlib import Path
 
-try:
-    import yaml  # For local config fallback
-except ImportError:
-    yaml = None
-
-# Logging setup
+# ───────────────────── FARGATE-SAFE LOGGING ─────────────────────
+# Only log to console (stdout) — Fargate can always write there
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler('organizer.log'),
-        logging.StreamHandler()
-    ]
+    handlers=[logging.StreamHandler()]   # ← ONLY console, no file
 )
 logger = logging.getLogger(__name__)
 
-# Config loading
-DIRECTORY_TO_SORT = os.environ.get('DIRECTORY_TO_SORT', 'watch_folder')
-CATEGORIES_JSON = os.environ.get('CATEGORIES_JSON', None)
-
-if CATEGORIES_JSON:
-    import json
-    DIRECTORIES = json.loads(CATEGORIES_JSON)
-else:
-    if yaml and Path('config.yaml').exists():
-        with open('config.yaml', 'r') as f:
+# Config loading (safe)
+try:
+    import yaml
+    if Path('config.yaml').exists():
+        with open('config.yaml') as f:
             config = yaml.safe_load(f) or {}
-            DIRECTORY_TO_SORT = config.get('directory_to_sort', DIRECTORY_TO_SORT)
-            DIRECTORIES = config.get('categories', {})
+        DIRECTORY_TO_SORT = config.get('directory_to_sort', 'watch_folder')
+        DIRECTORIES = config.get('categories', {})
     else:
-        DIRECTORIES = {
-            "IMAGES": [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp"],
-            "DOCUMENTS": [".pdf", ".docx", ".txt", ".doc", ".xlsx", ".pptx"],
-            "AUDIO": [".mp3", ".wav", ".flac", ".aac"],
-            "VIDEO": [".mp4", ".mov", ".avi", ".mkv"],
-            "ARCHIVES": [".zip", ".rar", ".7z", ".tar", ".gz"]
-        }
+        DIRECTORIES = {}
+except Exception:
+    DIRECTORIES = {}
+
+# Fallback categories if nothing loaded
+if not DIRECTORIES:
+    DIRECTORIES = {
+        "IMAGES": [".jpg", ".jpeg", ".png", ".gif"],
+        "DOCUMENTS": [".pdf", ".txt", ".docx"],
+        "VIDEO": [".mp4", ".mov", ".avi"],
+        "AUDIO": [".mp3", ".wav"],
+        "ARCHIVES": [".zip", ".rar"]
+    }
+
+DIRECTORY_TO_SORT = os.environ.get('DIRECTORY_TO_SORT', 'watch_folder')
 
 
 def organize_files():
-    """Main function – safe for import and direct run"""
     try:
-        # Ensure watch_folder exists and cd into it
         watch_path = Path(DIRECTORY_TO_SORT)
         watch_path.mkdir(exist_ok=True)
         os.chdir(watch_path)
-        logger.info(f"Started organizing files in '{watch_path.resolve()}'")
+        logger.info(f"Organizing files in: {watch_path}")
 
         for file_path in watch_path.iterdir():
             if file_path.is_file():
                 suffix = file_path.suffix.lower()
                 moved = False
-
-                for category, extensions in DIRECTORIES.items():
-                    if suffix in [ext.lower() for ext in extensions]:
-                        target_dir = watch_path / category
-                        target_dir.mkdir(exist_ok=True)
-                        shutil.move(str(file_path), target_dir / file_path.name)
-                        logger.info(f"Moved {file_path.name} → {category}/")
+                for cat, exts in DIRECTORIES.items():
+                    if suffix in [e.lower() for e in exts]:
+                        (watch_path / cat).mkdir(exist_ok=True)
+                        shutil.move(str(file_path), watch_path / cat / file_path.name)
+                        logger.info(f"Moved {file_path.name} → {cat}/")
                         moved = True
                         break
-
                 if not moved:
-                    other_dir = watch_path / "OTHER"
-                    other_dir.mkdir(exist_ok=True)
-                    shutil.move(str(file_path), other_dir / file_path.name)
-                    logger.warning(f"Unknown type: {file_path.name} → OTHER/")
+                    (watch_path / "OTHER").mkdir(exist_ok=True)
+                    shutil.move(str(file_path), watch_path / "OTHER" / file_path.name)
 
-        logger.info("File organization completed successfully!")
-
+        logger.info("Organization complete!")
     except Exception as e:
-        logger.error(f"Error during organization: {e}", exc_info=True)
+        logger.error(f"Error: {e}", exc_info=True)
 
 
-# This allows both: python organizer.py  AND  from organizer import organize_files
 if __name__ == "__main__":
     organize_files()
