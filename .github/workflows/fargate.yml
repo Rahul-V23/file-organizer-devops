@@ -7,7 +7,6 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -23,23 +22,22 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Build, tag, and push image to ECR
+      - name: Build, tag, push image
         id: build-image
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPOSITORY: file-organizer   # your ECR repo name
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+          docker build -t $ECR_REGISTRY/file-organizer:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/file-organizer:$IMAGE_TAG
+          echo "image=$ECR_REGISTRY/file-organizer:$IMAGE_TAG" >> $GITHUB_OUTPUT
 
-      - name: Render new task definition
+      - name: Render task definition
         id: task-def
         uses: aws-actions/amazon-ecs-render-task-definition@v1
         with:
           task-definition: task-definition.json
-          container-name: file-organizer-container    # must match EXACT name in JSON
+          container-name: file-organizer-container
           image: ${{ steps.build-image.outputs.image }}
 
       - name: Deploy to Fargate
