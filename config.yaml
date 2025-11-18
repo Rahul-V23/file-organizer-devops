@@ -1,0 +1,39 @@
+directory_to_sort: "watch_folder"
+categories:
+  IMAGES:
+    - ".jpeg"
+    - ".jpg"
+    - ".png"
+    - ".gif"
+    - ".bmp"
+    - ".svg"
+  VIDEOS:
+    - ".avi"
+    - ".mov"
+    - ".mp4"
+    - ".mkv"
+    - ".wmv"
+  DOCUMENTS:
+    - ".pdf"
+    - ".docx"
+    - ".doc"
+    - ".txt"
+    - ".xlsx"
+    - ".pptx"
+  ARCHIVES:
+    - ".zip"
+    - ".rar"
+    - ".7z"
+    - ".tar"
+    - ".gz"
+  CODE:
+    - ".py"
+    - ".html"
+    - ".css"
+    - ".js"
+    - ".json"
+  AUDIO:
+    - ".mp3"
+    - ".wav"
+    - ".aac"
+    - ".flac"

@@ -1,0 +1,24 @@
+{
+  "family": "file-organizer",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "256",
+  "memory": "512",
+  "containerDefinitions": [
+    {
+      "name": "file-organizer-container",
+      "image": "placeholder",
+      "essential": true,
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/file-organizer",
+          "awslogs-region": "eu-north-1",
+          "awslogs-stream-prefix": "ecs"
+        }
+      }
+    }
+  ],
+  "executionRoleArn": "arn:aws:iam::476114130133:role/ecsTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::476114130133:role/ecsTaskExecutionRole"
+}
