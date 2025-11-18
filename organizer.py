@@ -3,50 +3,62 @@ import shutil
 import logging
 from pathlib import Path
 
-# ONLY console logging – safe for Fargate
+# Safe logging — only stdout
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
+    format="%(asctime)s - %(levelname)s - %(message)s",
     handlers=[logging.StreamHandler()]
 )
 logger = logging.getLogger(__name__)
 
-# Safe defaults
-DIRECTORY_TO_SORT = os.environ.get('DIRECTORY_TO_SORT', 'watch_folder')
-DIRECTORIES = {
-    "IMAGES":   [".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp"],
-    "DOCUMENTS":[".pdf", ".txt", ".docx", ".xlsx", ".pptx"],
-    "VIDEO":    [".mp4", ".mov", ".avi", ".mkv"],
-    "AUDIO":    [".mp3", ".wav", ".flac"],
-    "ARCHIVES": [".zip", ".rar", ".7z", ".tar.gz"]
+# Hard-coded — no YAML, no env, no surprises
+DIRECTORY_TO_SORT = "watch_folder"
+
+CATEGORIES = {
+    "IMAGES":   [".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".svg", ".tiff"],
+    "DOCUMENTS":[".pdf", ".docx", ".txt", ".xlsx", ".pptx", ".csv", ".md"],
+    "VIDEO":    [".mp4", ".mov", ".avi", ".mkv", ".webm", ".flv"],
+    "AUDIO":    [".mp3", ".wav", ".flac", ".aac", ".ogg"],
+    "ARCHIVES": [".zip", ".rar", ".7z", ".tar", ".gz", ".bz2"]
 }
 
-def organize_files():
+
+def organize_files() -> None:
+    """This is the ONLY function that does work. Safe to import."""
     try:
         watch_path = Path(DIRECTORY_TO_SORT)
-        watch_path.mkdir(exist_ok=True)          # ← create if missing
-        os.chdir(watch_path)                     # ← now safe
-        logger.info(f"Organizing files in: {watch_path.resolve()}")
+        watch_path.mkdir(exist_ok=True)
+        os.chdir(watch_path)
+        logger.info(f"Successfully changed to directory: {watch_path.resolve()}")
 
         for file_path in watch_path.iterdir():
-            if file_path.is_file():
-                suffix = file_path.suffix.lower()
-                moved = False
-                for cat, exts in DIRECTORIES.items():
-                    if suffix in [e.lower() for e in exts]:
-                        (watch_path / cat).mkdir(exist_ok=True)
-                        shutil.move(str(file_path), watch_path / cat / file_path.name)
-                        logger.info(f"Moved {file_path.name} → {cat}/")
-                        moved = True
-                        break
-                if not moved:
-                    (watch_path / "OTHER").mkdir(exist_ok=True)
-                    shutil.move(str(file_path), watch_path / "OTHER" / file_path.name)
+            if not file_path.is_file():
+                continue
 
-        logger.info("Organization complete!")
+            suffix = file_path.suffix.lower()
+            moved = False
+
+            for folder_name, extensions in CATEGORIES.items():
+                if suffix in extensions:
+                    target_dir = watch_path / folder_name
+                    target_dir.mkdir(exist_ok=True)
+                    shutil.move(str(file_path), target_dir / file_path.name)
+                    logger.info(f"Moved: {file_path.name} → {folder_name}/")
+                    moved = True
+                    break
+
+            if not moved:
+                other_dir = watch_path / "OTHER"
+                other_dir.mkdir(exist_ok=True)
+                shutil.move(str(file_path), other_dir / file_path.name)
+                logger.info(f"Moved: {file_path.name} → OTHER/")
+
+        logger.info("File organization completed successfully!")
+
     except Exception as e:
-        logger.error(f"Error: {e}", exc_info=True)
+        logger.error(f"Unexpected error in organize_files: {e}", exc_info=True)
 
-# Keep this for local testing
+
+# This block only runs when you do "python organizer.py" locally
 if __name__ == "__main__":
     organize_files()
