@@ -34,20 +34,24 @@ jobs:
           echo "image=$ECR_REGISTRY/file-organizer:$IMAGE_TAG" >> $GITHUB_OUTPUT
 
       - name: Render task definition
-        id: task-def
+        id: render-task-def
         uses: aws-actions/amazon-ecs-render-task-definition@v1
         with:
           task-definition: task-definition.json
           container-name: file-organizer-container
           image: ${{ steps.build-image.outputs.image }}
 
-      - name: Deploy to Fargate (bypass the port-80 bug)
-        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
-        with:
-          task-definition: ${{ steps.task-def.outputs.task-definition }}
-          service: ${{ secrets.ECS_SERVICE }}
-          cluster: ${{ secrets.ECS_CLUSTER }}
-          wait-for-service-stability: true
-          force-new-deployment: true
-          # THIS LINE KILLS THE BUG FOREVER
-          skip-task-definition-validation: true
+      # This step SAVES the rendered JSON to a real file so the CLI can read it
+      - name: Save rendered task definition
+        run: |
+          echo '${{ steps.render-task-def.outputs.task-definition }}' > rendered-task-def.json
+
+      # Raw AWS CLI — completely bypasses the buggy v2 action
+      - name: Register new task definition + deploy
+        run: |
+          aws ecs register-task-definition --cli-input-json file://rendered-task-def.json
+          aws ecs update-service \
+            --cluster ${{ secrets.ECS_CLUSTER }} \
+            --service ${{ secrets.ECS_SERVICE }} \
+            --force-new-deployment \
+            --task-definition file-organizer
